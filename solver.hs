@@ -25,3 +25,13 @@ addNumberToCrosswordHelper row ((x):xs) = addNumberToLetterHelper (length x * ro
 
 addNumberToCrossword :: [String] -> [[(Char, Int)]]
 addNumberToCrossword = addNumberToCrosswordHelper 0
+
+printElements ::  [(Char, Int)] -> Int -> Int -> IO()
+printElements [] _ _  = putStrLn ""
+printElements ((a,b):c) 0 crwrdLength = do
+    putStrLn([a])
+    printElements c crwrdLength crwrdLength
+
+printElements ((a,b):c) num crwrdLength = do
+  putStr([a])
+  printElements c (num - 1) crwrdLength
