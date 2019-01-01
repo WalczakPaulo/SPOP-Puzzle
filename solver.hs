@@ -8,6 +8,3 @@ removePunc xs = [ x | x <- xs, not (x `elem` ",.?!-:;\"\'") && x /= ' ']
 ignoreIrrevelantSigns :: [String] -> [String]
 ignoreIrrevelantSigns [] = []
 ignoreIrrevelantSigns (x:xs) = removePunc x : ignoreIrrevelantSigns xs
-
-
-lol = readWords "/home/paul/SPOP/data2/words"
