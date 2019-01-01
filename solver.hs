@@ -1,3 +1,8 @@
+readCrossword path = do
+  crossword <- readFile path
+  let processedCrossword = lines crossword
+  return processedCrossword
+
 readWords path = do
   words <- readFile path
   let processedWords = ignoreIrrevelantSigns (lines words)
