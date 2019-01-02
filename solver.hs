@@ -26,6 +26,14 @@ addNumberToCrosswordHelper row ((x):xs) = addNumberToLetterHelper (length x * ro
 addNumberToCrossword :: [String] -> [[(Char, Int)]]
 addNumberToCrossword = addNumberToCrosswordHelper 0
 
+transpose :: [[(Char, Int)]] -> [[(Char, Int)]]
+transpose [[]] = []
+transpose x = map head x : transpose (map tail x)
+
+getAllCombinations :: [[(Char, Int)]] -> [[(Char, Int)]]
+getAllCombinations [[]] = []
+getAllCombinations crossword = crossword ++ transpose crossword
+
 printElements ::  [(Char, Int)] -> Int -> Int -> IO()
 printElements [] _ _  = putStrLn ""
 printElements ((a,b):c) 0 crwrdLength = do
@@ -35,3 +43,13 @@ printElements ((a,b):c) 0 crwrdLength = do
 printElements ((a,b):c) num crwrdLength = do
   putStr([a])
   printElements c (num - 1) crwrdLength
+
+printList :: String ->  IO()
+printList [] = do putStrLn ""
+printList (x:xs) = do putStr [x]
+                      printList xs
+
+printSolution :: [String] -> IO()
+printSolution [] = do putStr ""
+printSolution (x:xs) = do printList x
+                          printSolution xs
