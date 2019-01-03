@@ -1,10 +1,11 @@
-
+-- usun znaki interpunkcyjne (nie powinny wystapic)
 removePunc :: String -> String
 removePunc xs = [ x | x <- xs, not (x `elem` ",.?!-:;\"\'") && x /= ' ']
 
-ignoreIrrevelantSigns :: [String] -> [String]
-ignoreIrrevelantSigns [] = []
-ignoreIrrevelantSigns (x:xs) = removePunc x : ignoreIrrevelantSigns xs
+-- aplikacja removePunc dla zbioru slow
+ignoreIrrelevantSigns :: [String] -> [String]
+ignoreIrrelevantSigns [] = []
+ignoreIrrelevantSigns (x:xs) = removePunc x : ignoreIrrelevantSigns xs
 
 addNumberToLetterHelper :: Int -> String -> [(Char, Int)]
 addNumberToLetterHelper _ [] = []
@@ -14,24 +15,30 @@ addNumberToCrosswordHelper :: Int -> [String] -> [[(Char, Int)]]
 addNumberToCrosswordHelper _ [] = []
 addNumberToCrosswordHelper row ((x):xs) = addNumberToLetterHelper (length x * row) x : addNumberToCrosswordHelper (row + 1) xs
 
+-- ponumeruj litery z planszy
 addNumberToCrossword :: [String] -> [[(Char, Int)]]
 addNumberToCrossword = addNumberToCrosswordHelper 0
 
+-- wczytaj plik z opisem planszy z literami
+readCrossword :: FilePath -> IO [[(Char, Int)]]
 readCrossword path = do
   crossword <- readFile path
   let processedCrossword = addNumberToCrossword (lines crossword)
   return processedCrossword
 
+  -- wczytaj plik z listą słów do wykreślenia
+readWords :: FilePath -> IO [String]
 readWords path = do
   words <- readFile path
-  let processedWords = ignoreIrrevelantSigns (lines words)
+  let processedWords = ignoreIrrelevantSigns (lines words)
   return processedWords
 
-
+-- transponuj plansze z literami
 transpose :: [[(Char, Int)]] -> [[(Char, Int)]]
 transpose ([]:_) = []
 transpose x = map head x : transpose (map tail x)
 
+-- usun pierwszy wiersz planszy
 removeFirstRow :: [[(Char, Int)]] -> [[(Char, Int)]]
 removeFirstRow [[]] = []
 removeFirstRow ((x):xs) = xs
@@ -41,6 +48,7 @@ diagonal [] = []
 diagonal ([]:_) = []
 diagonal ((x):xs) = head x : diagonal (map tail xs)
 
+-- diagonale rozpoczynające się od kolejnych kolumn
 allDiagonals :: [[(Char, Int)]] -> [[(Char, Int)]]
 allDiagonals [] = []
 allDiagonals x = [diagonal x] ++ allDiagonals (removeFirstRow x)
