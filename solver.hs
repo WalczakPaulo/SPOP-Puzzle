@@ -116,25 +116,38 @@ removeLetter xs idx cols | idx < 0 = xs
                          | idx < cols = ((removeLetter' (head xs) idx):(tail xs))
                          | otherwise = ((head xs):(removeLetter (tail xs) idx (cols+cols)))
 
+-- -- Remove letters with given list of numbers form crossword 
+-- removeWord :: [[(Char, Int)]]    -- ^ crossword
+--               -> Maybe [Int]     -- ^ indexes of letter to remove
+--               -> Int             -- ^ number of cols in crossword
+--               -> [[(Char, Int)]] -- ^ updated crossword
+-- removeWord cross (Just []) cols = cross
+-- removeWord cross xs cols = case xs of
+--   Just n -> removeWord (removeLetter cross (head n) cols) (Just (tail n)) cols
+--   Nothing -> cross
+
 -- Remove letters with given list of numbers form crossword 
 removeWord :: [[(Char, Int)]]    -- ^ crossword
-              -> Maybe [Int]     -- ^ indexes of letter to remove
+              -> [Int]           -- ^ indexes of letter to remove
               -> Int             -- ^ number of cols in crossword
               -> [[(Char, Int)]] -- ^ updated crossword
-removeWord cross (Just []) cols = cross
-removeWord cross xs cols = case xs of
-  Just n -> removeWord (removeLetter cross (head n) cols) (Just (tail n)) cols
-  Nothing -> cross
+removeWord cross [] cols = cross
+removeWord cross (x:xs) cols = removeWord (removeLetter cross x cols) xs cols
 
 -- Solve the crossword
 solve :: [[(Char, Int)]]  -- ^ crossword
       -> [String]         -- ^ list of words to find
-      -> [[(Char, Int)]]          -- ^ solution
-solve cross _ = cross
--- solve cross words = do
---   all <- getAllCombinations cross
---   word <- findWord "RYE" all
---   return cross
+      -> [[(Char, Int)]]  -- ^ solution
+solve cross [w] = 
+  case findWord w (getAllCombinations cross) of
+    Just n -> removeWord cross n 11
+    Nothing -> error w
+solve cross (w:ws) = solve (solve cross [w]) ws
+
+-- solve cross words =
+--   case findWord "JULIET" (getAllCombinations cross) of
+--     Just n -> removeWord cross n 11
+--     Nothing -> error "world not found"
 
 main :: IO ()
 main = do
@@ -147,4 +160,5 @@ main = do
   -- print (removeLetter cross (findWord "RYE" (getAllCombinations cross)) 11)
   -- print (removeWord cross [0,1,2,3,4,5] 11)
   -- print(findWord "JULIET" (getAllCombinations cross)) 
-  print (removeWord cross (findWord "JULIET" (getAllCombinations cross)) 11)
+  -- print (removeWord cross (findWord "JULIET" (getAllCombinations cross)) 11)
+  print (solve cross words)
