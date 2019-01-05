@@ -50,10 +50,17 @@ diagonal [] = []
 diagonal ([]:_) = []
 diagonal ((x):xs) = head x : diagonal (map tail xs)
 
+-- 
+antidiagonal :: [[(Char, Int)]] 
+              -> [(Char, Int)]
+antidiagonal [] = []
+antidiagonal ([]:_) = []
+antidiagonal ((x):xs) = last x : antidiagonal (map init xs)
+
 -- diagonale rozpoczynające się od kolejnych kolumn
 allDiagonals :: [[(Char, Int)]] -> [[(Char, Int)]]
 allDiagonals [] = []
-allDiagonals x = [diagonal x] ++ allDiagonals (removeFirstRow x)
+allDiagonals x = [diagonal x] ++ [reverse (antidiagonal x)] ++ allDiagonals (removeFirstRow x)
 
 getAllCombinations :: [[(Char, Int)]] -> [[(Char, Int)]]
 getAllCombinations [[]] = []
@@ -112,9 +119,11 @@ removeLetter :: [[(Char, Int)]]  -- ^ crossword
               -> Int             -- ^ index of letter to remove
               -> Int             -- ^ number of cols in crossword
               -> [[(Char, Int)]] -- ^ updated crossword
-removeLetter xs idx cols | idx < 0 = xs
-                         | idx < cols = ((removeLetter' (head xs) idx):(tail xs))
-                         | otherwise = ((head xs):(removeLetter (tail xs) idx (cols+cols)))
+removeLetter [] _ _ = []   
+removeLetter [x] idx cols = [removeLetter' x idx]          
+removeLetter (x:xs) idx cols | idx < 0 = (x:xs)
+                             | idx < cols = ((removeLetter' x idx): xs)
+                             | otherwise = (x:(removeLetter xs idx (cols+cols)))
 
 -- -- Remove letters with given list of numbers form crossword 
 -- removeWord :: [[(Char, Int)]]    -- ^ crossword
@@ -138,6 +147,7 @@ removeWord cross (x:xs) cols = removeWord (removeLetter cross x cols) xs cols
 solve :: [[(Char, Int)]]  -- ^ crossword
       -> [String]         -- ^ list of words to find
       -> [[(Char, Int)]]  -- ^ solution
+solve cross [] = cross
 solve cross [w] = 
   case findWord w (getAllCombinations cross) of
     Just n -> removeWord cross n 11
@@ -152,13 +162,5 @@ solve cross (w:ws) = solve (solve cross [w]) ws
 main :: IO ()
 main = do
   cross <- readCrossword "data1/crossword"
-  words <- readWords "data1/words"
-  -- printElements (head cross) 11 11
-  -- print (removeLetter cross 12 11)
-  -- print (findString "ROMEO" (head (removeFirstRow cross)))
-  -- print . getAllCombinations $ cross
-  -- print (removeLetter cross (findWord "RYE" (getAllCombinations cross)) 11)
-  -- print (removeWord cross [0,1,2,3,4,5] 11)
-  -- print(findWord "JULIET" (getAllCombinations cross)) 
-  -- print (removeWord cross (findWord "JULIET" (getAllCombinations cross)) 11)
-  print (solve cross words)
+  words <- readWords "data1/words" 
+  print (solve cross ["JULIET"])
