@@ -97,7 +97,7 @@ findString search str = do
 findWord :: String              -- ^ word
           -> [[(Char, Int)]]    -- ^ all combinations of crossword
           -> Maybe [Int]        -- ^ list of indexes
-findWord [] _ = Nothing
+findWord _ [] = Nothing
 findWord word (x:xs) = if (findString word x) == Nothing
                         then findWord word xs
                       else findString word x
@@ -116,12 +116,25 @@ removeLetter xs idx cols | idx < 0 = xs
                          | idx < cols = ((removeLetter' (head xs) idx):(tail xs))
                          | otherwise = ((head xs):(removeLetter (tail xs) idx (cols+cols)))
 
--- -- Solve the crossword
--- solve :: [[(Char, Int)]]  -- ^ crossword
---       -> [String]         -- ^ list of words to find
---       -> String           -- ^ solution
+-- Remove letters with given list of numbers form crossword 
+removeWord :: [[(Char, Int)]]    -- ^ crossword
+              -> Maybe [Int]     -- ^ indexes of letter to remove
+              -> Int             -- ^ number of cols in crossword
+              -> [[(Char, Int)]] -- ^ updated crossword
+removeWord cross (Just []) cols = cross
+removeWord cross xs cols = case xs of
+  Just n -> removeWord (removeLetter cross (head n) cols) (Just (tail n)) cols
+  Nothing -> cross
+
+-- Solve the crossword
+solve :: [[(Char, Int)]]  -- ^ crossword
+      -> [String]         -- ^ list of words to find
+      -> [[(Char, Int)]]          -- ^ solution
+solve cross _ = cross
 -- solve cross words = do
 --   all <- getAllCombinations cross
+--   word <- findWord "RYE" all
+--   return cross
 
 main :: IO ()
 main = do
@@ -129,8 +142,9 @@ main = do
   words <- readWords "data1/words"
   -- printElements (head cross) 11 11
   -- print (removeLetter cross 12 11)
-  -- print (head (removeFirstRow cross))
   -- print (findString "ROMEO" (head (removeFirstRow cross)))
   -- print . getAllCombinations $ cross
-  print(findWord "RYE" (getAllCombinations cross)) 
-
+  -- print (removeLetter cross (findWord "RYE" (getAllCombinations cross)) 11)
+  -- print (removeWord cross [0,1,2,3,4,5] 11)
+  -- print(findWord "JULIET" (getAllCombinations cross)) 
+  print (removeWord cross (findWord "JULIET" (getAllCombinations cross)) 11)
