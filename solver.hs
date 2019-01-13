@@ -90,12 +90,16 @@ printSolution (x:xs) = do printList x
 findString' :: String          -- ^ string to search for
             -> String          -- ^ string to search in
             -> Maybe Int       -- ^ starting index
+findString' _ [] = Nothing
+findString' [] _ = Nothing
 findString' search str = findIndex (isPrefixOf search) (tails str)
 
 -- 
 findString :: String           -- ^ string to search for
             -> [(Char, Int)]   -- ^ row to search in
             -> Maybe [Int]     -- ^ list of indexes
+findString _ [] = Nothing
+findString [] _ = Nothing
 findString search str = do 
   idx <- findString' search (map fst str)
   return (map snd . take (length search) . drop idx $ str)
@@ -105,12 +109,15 @@ findWord :: String              -- ^ word
           -> [[(Char, Int)]]    -- ^ all combinations of crossword
           -> Maybe [Int]        -- ^ list of indexes
 findWord _ [] = Nothing
-findWord word (x:xs) = if (findString word x) == Nothing
+findWord [] _ = Nothing
+findWord word [x] = findString word x
+findWord word (x:xs) = if (findString word x) == Nothing 
                         then findWord word xs
                       else findString word x
 
 removeLetter' :: [(Char, Int)] -> Int -> [(Char, Int)]
 removeLetter' [] _ = []
+removeLetter' [(a,b)] idx = []
 removeLetter' ((a,b):c) idx | b == idx = c
                             | otherwise = [(a,b)] ++ (removeLetter' c idx)
 
@@ -141,6 +148,7 @@ removeWord :: [[(Char, Int)]]    -- ^ crossword
               -> Int             -- ^ number of cols in crossword
               -> [[(Char, Int)]] -- ^ updated crossword
 removeWord cross [] cols = cross
+removeWord cross [x] cols = removeLetter cross x cols
 removeWord cross (x:xs) cols = removeWord (removeLetter cross x cols) xs cols
 
 -- Solve the crossword
@@ -163,4 +171,10 @@ main :: IO ()
 main = do
   cross <- readCrossword "data1/crossword"
   words <- readWords "data1/words" 
-  print (solve cross ["JULIET"])
+  -- print words
+  -- print (getAllCombinations cross)
+  -- print (solve cross ["BRIDE", "CARDS","CARESS", "CHOCOLATE"])
+  -- print (removeWord (removeWord cross "ARROW" 11) "ADORER" 11)
+  print (solve cross ["ADORER", "ARROW"])
+
+-- ["ADORER","ARROW","BOUQUET","BRIDE","CARDS","CARESS","CHOCOLATE","COUPLE","CUPID","DATE","DATING","DEVOTION","EMBRACE","FIRST","KISS","GROOM","HEART","HUGS","ISEULT","LOVE","LUCK","LYRE","ODE","POEM","PRESENT","QUEEN","RENDEZVOUS","RING","ROMEO","ROSES","RYE","SCENTS","SENSE","SONG","SWEET","TRISTAN","WEDDING"]
