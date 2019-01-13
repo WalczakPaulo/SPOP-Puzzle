@@ -1,5 +1,6 @@
 import Data.List
 import Data.Char
+import qualified Data.Set as Set
 -- usun znaki interpunkcyjne (nie powinny wystapic)
 removePunc :: String -> String
 removePunc xs = [ x | x <- xs, not (x `elem` ",.?!-:;\"\'") && x /= ' ']
@@ -60,7 +61,8 @@ antidiagonal ((x):xs) = last x : antidiagonal (map init xs)
 -- diagonale rozpoczynające się od kolejnych kolumn
 allDiagonals :: [[(Char, Int)]] -> [[(Char, Int)]]
 allDiagonals [] = []
-allDiagonals x = [diagonal x] ++ [reverse (antidiagonal x)] ++ allDiagonals (removeFirstRow x)
+-- allDiagonals x = [reverse (antidiagonal x)] ++ allDiagonals (removeFirstRow x)
+allDiagonals x = [diagonal x] ++ [antidiagonal x] ++ [reverse (antidiagonal x)] ++ allDiagonals (removeFirstRow x)
 
 getAllCombinations :: [[(Char, Int)]] -> [[(Char, Int)]]
 getAllCombinations [[]] = []
@@ -90,6 +92,7 @@ findWord word (x:xs) = if (findString word x) == Nothing
                         then findWord word xs
                       else findString word x
 
+
 removeLetter' :: [(Char, Int)] -> Int -> [(Char, Int)]
 removeLetter' [] _ = []
 removeLetter' ((a,b):c) idx | b == idx = [('*',b)] ++ c
@@ -117,6 +120,25 @@ removeLetter (x:xs) idx cols colsConst | idx < 0 = (x:xs)
 --   Just n -> removeWord (removeLetter cross (head n) cols) (Just (tail n)) cols
 --   Nothing -> cross
 
+-- Collect all found words (list of indexes)
+collectIndexes :: [Int]         -- ^ indexes of word to remove
+               -> [Int]       -- ^ set to update
+               -> [Int]       -- ^ updated set
+collectIndexes xs set = set ++ xs 
+-- collectIndexes [] set = set 
+-- collectIndexes [x] set = Set.insert x set 
+-- collectIndexes (x:xs) set = map f xs where f = 
+--   Set.insert x set
+--   collectIndexes xs set
+
+-- updateSet :: [Int] -> Set.Set Int -> Set.Set Int
+-- updateSet idxs set = return (collectIndexes idxs set)
+-- updateSet idxs set = do
+--   let updatedSet = collectIndexes idxs set
+--   return updatedSet
+
+
+
 -- Remove letters with given list of numbers form crossword
 removeWord :: [[(Char, Int)]]    -- ^ crossword
               -> [Int]           -- ^ indexes of letter to remove
@@ -128,18 +150,27 @@ removeWord cross (x:xs) cols = removeWord (removeLetter cross x cols cols) xs co
 -- Solve the crossword
 solve :: [[(Char, Int)]]  -- ^ crossword
       -> [String]         -- ^ list of words to find
-      -> [[(Char, Int)]]  -- ^ solution
-solve cross [] = cross
-solve cross [w] =
+      -> [Int]            -- ^ list of indexes to remove
+      -> [Int]            -- ^ updated list of indexes to remove
+solve cross [] idx = idx
+solve cross (w:ws) idx = do
   case findWord w (getAllCombinations cross) of
-    Just n -> removeWord cross n 11
-    Nothing -> error w
-solve cross (w:ws) = solve (solve cross [w]) ws
+    Just n -> idx ++ n --removeWord cross n 11
+    Nothing -> error w--idx
+  ++ solve cross ws idx
 
 -- solve cross words =
 --   case findWord "JULIET" (getAllCombinations cross) of
 --     Just n -> removeWord cross n 11
 --     Nothing -> error "world not found"
+
+-- Remove all indexes from crossword
+removeIndexes :: [[(Char, Int)]]  -- ^ crossword
+              -> [Int]            -- ^ indexes to remove
+              -> [[(Char, Int)]]  -- ^ solved crossword
+-- set: delete duplicates
+removeIndexes cross idxs = removeWord cross (nub idxs) 11
+
 
 makeCrossString :: [[(Char, Int)]] -> String
 makeCrossString [] = []
@@ -147,11 +178,15 @@ makeCrossString (x:xs) = makeCrossString' x ++ "\n" ++ makeCrossString xs
 
 makeCrossString' :: [(Char, Int)] -> String
 makeCrossString' [] = []
-makeCrossString' ((a,b):xs) = a : makeCrossString' xs
+makeCrossString' ((a,b):xs) | a /= '*' = a : makeCrossString' xs
+                            | otherwise = makeCrossString' xs
 
 main :: IO ()
 main = do
   cross <- readCrossword "data1/crossword"
   words <- readWords "data1/words"
-  print (solve cross ["JULIET", "CARESS","WEDDING", "ROMEO", "BOUQUETTE"])
+  -- print words
+  print (allDiagonals cross)
+  print (makeCrossString (removeIndexes cross (solve cross words [])))
+  -- print (solve cross ["JULIET", "CARESS","WEDDING", "ROMEO", "BOUQUETTE"] [])
   --print ( handle (solve cross ["JULIET", "CARESS"]) ([0..(16*12)]) (length(head cross)))
