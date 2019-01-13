@@ -1,5 +1,5 @@
 import Data.List
-
+import Data.Char
 -- usun znaki interpunkcyjne (nie powinny wystapic)
 removePunc :: String -> String
 removePunc xs = [ x | x <- xs, not (x `elem` ",.?!-:;\"\'") && x /= ' ']
@@ -71,6 +71,8 @@ findString' :: String          -- ^ string to search for
             -> Maybe Int       -- ^ starting index
 findString' search str = findIndex (isPrefixOf search) (tails str)
 
+test = findString "CDE" [('A', 1),('B', 2),('C' ,3),('C',4),('E',5),('F', 6)]
+
 --
 findString :: String           -- ^ string to search for
             -> [(Char, Int)]   -- ^ row to search in
@@ -90,19 +92,20 @@ findWord word (x:xs) = if (findString word x) == Nothing
 
 removeLetter' :: [(Char, Int)] -> Int -> [(Char, Int)]
 removeLetter' [] _ = []
-removeLetter' ((a,b):c) idx | b == idx = c
+removeLetter' ((a,b):c) idx | b == idx = [('*',b)] ++ c
                             | otherwise = [(a,b)] ++ (removeLetter' c idx)
 
 -- Remove letter with given index form crossword
 removeLetter :: [[(Char, Int)]]  -- ^ crossword
               -> Int             -- ^ index of letter to remove
               -> Int             -- ^ number of cols in crossword
+              -> Int
               -> [[(Char, Int)]] -- ^ updated crossword
-removeLetter [] _ _ = []
-removeLetter [x] idx cols = [removeLetter' x idx]
-removeLetter (x:xs) idx cols | idx < 0 = (x:xs)
-                             | idx < cols = ((removeLetter' x idx): xs)
-                             | otherwise = (x:(removeLetter xs idx (cols+cols)))
+removeLetter [] _ _ _= []
+removeLetter [x] idx cols _ = [removeLetter' x idx]
+removeLetter (x:xs) idx cols colsConst | idx < 0 = (x:xs)
+                                       | idx <= cols = ((removeLetter' x idx): xs)
+                                       | otherwise = (x: (removeLetter xs idx (cols+colsConst+1) colsConst) )
 
 -- -- Remove letters with given list of numbers form crossword
 -- removeWord :: [[(Char, Int)]]    -- ^ crossword
@@ -120,7 +123,7 @@ removeWord :: [[(Char, Int)]]    -- ^ crossword
               -> Int             -- ^ number of cols in crossword
               -> [[(Char, Int)]] -- ^ updated crossword
 removeWord cross [] cols = cross
-removeWord cross (x:xs) cols = removeWord (removeLetter cross x cols) xs cols
+removeWord cross (x:xs) cols = removeWord (removeLetter cross x cols cols) xs cols
 
 -- Solve the crossword
 solve :: [[(Char, Int)]]  -- ^ crossword
@@ -138,14 +141,6 @@ solve cross (w:ws) = solve (solve cross [w]) ws
 --     Just n -> removeWord cross n 11
 --     Nothing -> error "world not found"
 
-fillBlankWithStar :: [[(Char, Int)]] -> [Int] -> Int -> [[(Char, Int)]]
-fillBlankWithStar [] _ _ = []
-fillBlankWithStar (x:xs) a c = fillBlankWithStar' x a : (fillBlankWithStar (xs) (drop c a) c)
-
-fillBlankWithStar' :: [(Char, Int)] -> [Int] -> [(Char,Int)]
-fillBlankWithStar' [] _ = []
-fillBlankWithStar' ((x,y):xs) (a:b) | y == a = (x,y) : fillBlankWithStar' xs b
-                         | otherwise = ('*', a) : fillBlankWithStar' ((x,y):xs) b
 makeCrossString :: [[(Char, Int)]] -> String
 makeCrossString [] = []
 makeCrossString (x:xs) = makeCrossString' x ++ "\n" ++ makeCrossString xs
@@ -158,5 +153,5 @@ main :: IO ()
 main = do
   cross <- readCrossword "data1/crossword"
   words <- readWords "data1/words"
-  print (solve cross ["JULIET", "CARESS", "PRESENT"])
+  print (solve cross ["JULIET", "CARESS","WEDDING", "ROMEO", "BOUQUETTE"])
   --print ( handle (solve cross ["JULIET", "CARESS"]) ([0..(16*12)]) (length(head cross)))
