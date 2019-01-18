@@ -61,8 +61,8 @@ antidiagonal ((x):xs) = last x : antidiagonal (map init xs)
 -- diagonale rozpoczynające się od kolejnych kolumn
 allDiagonals :: [[(Char, Int)]] -> [[(Char, Int)]]
 allDiagonals [] = []
--- allDiagonals x = [reverse (antidiagonal x)] ++ allDiagonals (removeFirstRow x)
-allDiagonals x = [diagonal x] ++ [antidiagonal x] ++ [reverse (antidiagonal x)] ++ allDiagonals (removeFirstRow x)
+allDiagonals x = [diagonal x] ++ [reverse (antidiagonal x)] ++ allDiagonals (removeFirstRow x)
+-- allDiagonals x = [diagonal x] ++ [antidiagonal x] ++ [reverse (antidiagonal x)] ++ allDiagonals (removeFirstRow x)
 
 getAllCombinations :: [[(Char, Int)]] -> [[(Char, Int)]]
 getAllCombinations [[]] = []
