@@ -1,5 +1,6 @@
 import Data.List
 import Data.Char
+import qualified Data.Set as Set
 -- usun znaki interpunkcyjne (nie powinny wystapic)
 removePunc :: String -> String
 removePunc xs = [ x | x <- xs, not (x `elem` ",.?!-:;\"\'") && x /= ' ']
@@ -45,6 +46,10 @@ removeFirstRow :: [[(Char, Int)]] -> [[(Char, Int)]]
 removeFirstRow [[]] = []
 removeFirstRow ((x):xs) = xs
 
+removeLastCol :: [[(Char, Int)]] -> [[(Char, Int)]]
+removeLastCol [[]] = []
+removeLastCol x = map init x
+
 diagonal :: [[(Char, Int)]] -> [(Char, Int)]
 diagonal [] = []
 diagonal ([]:_) = []
@@ -57,14 +62,23 @@ antidiagonal [] = []
 antidiagonal ([]:_) = []
 antidiagonal ((x):xs) = last x : antidiagonal (map init xs)
 
+lol = [[('A',1),('B',2),('C',3)],[('D',4),('E',5),('F',6)],[('G',7),('H',8),('I',9)]]
+chuj = reverse ( antidiagonal lol )
+chujstwo = removeLastCol lol
+
+antiDiagonals :: [[(Char, Int)]] -> [[(Char, Int)]]
+antiDiagonals [] = []
+antiDiagonals x = [antidiagonal x] ++ [reverse (antidiagonal x)] ++ antiDiagonals (removeLastCol x)
+
 -- diagonale rozpoczynające się od kolejnych kolumn
 allDiagonals :: [[(Char, Int)]] -> [[(Char, Int)]]
 allDiagonals [] = []
-allDiagonals x = [diagonal x] ++ [reverse (antidiagonal x)] ++ allDiagonals (removeFirstRow x)
+-- allDiagonals x = [reverse (antidiagonal x)] ++ allDiagonals (removeFirstRow x)
+allDiagonals x = [diagonal x] ++ [reverse ( diagonal x )] ++ [antidiagonal x] ++ [reverse (antidiagonal x)] ++ allDiagonals (removeFirstRow x)
 
 getAllCombinations :: [[(Char, Int)]] -> [[(Char, Int)]]
 getAllCombinations [[]] = []
-getAllCombinations crossword = crossword ++ transposeCrossword crossword ++ allDiagonals crossword ++ allDiagonals (transposeCrossword crossword)
+getAllCombinations crossword = crossword ++ transposeCrossword crossword ++ allDiagonals crossword ++ allDiagonals (transposeCrossword crossword) ++ antiDiagonals crossword ++ antiDiagonals (transpose crossword)
 
 findString' :: String          -- ^ string to search for
             -> String          -- ^ string to search in
@@ -92,10 +106,9 @@ findWord word (x:xs) = if (findString word x) == Nothing
 
 removeLetter' :: [(Char, Int)] -> Int -> [(Char, Int)]
 removeLetter' [] _ = []
-removeLetter' ((a,b):c) idx | b == idx = [('*',b)] ++ c
+removeLetter' ((a,b):c) idx | b == idx = [('.',b)] ++ c
                             | otherwise = [(a,b)] ++ (removeLetter' c idx)
 
--- Remove letter with given index form crossword
 removeLetter :: [[(Char, Int)]]  -- ^ crossword
               -> Int             -- ^ index of letter to remove
               -> Int             -- ^ number of cols in crossword
@@ -107,17 +120,12 @@ removeLetter (x:xs) idx cols colsConst | idx < 0 = (x:xs)
                                        | idx <= cols = ((removeLetter' x idx): xs)
                                        | otherwise = (x: (removeLetter xs idx (cols+colsConst+1) colsConst) )
 
--- -- Remove letters with given list of numbers form crossword
--- removeWord :: [[(Char, Int)]]    -- ^ crossword
---               -> Maybe [Int]     -- ^ indexes of letter to remove
---               -> Int             -- ^ number of cols in crossword
---               -> [[(Char, Int)]] -- ^ updated crossword
--- removeWord cross (Just []) cols = cross
--- removeWord cross xs cols = case xs of
---   Just n -> removeWord (removeLetter cross (head n) cols) (Just (tail n)) cols
---   Nothing -> cross
 
--- Remove letters with given list of numbers form crossword
+collectIndexes :: [Int]         -- ^ indexes of word to remove
+               -> [Int]       -- ^ set to update
+               -> [Int]       -- ^ updated set
+collectIndexes xs set = set ++ xs
+
 removeWord :: [[(Char, Int)]]    -- ^ crossword
               -> [Int]           -- ^ indexes of letter to remove
               -> Int             -- ^ number of cols in crossword
@@ -125,21 +133,23 @@ removeWord :: [[(Char, Int)]]    -- ^ crossword
 removeWord cross [] cols = cross
 removeWord cross (x:xs) cols = removeWord (removeLetter cross x cols cols) xs cols
 
--- Solve the crossword
 solve :: [[(Char, Int)]]  -- ^ crossword
       -> [String]         -- ^ list of words to find
-      -> [[(Char, Int)]]  -- ^ solution
-solve cross [] = cross
-solve cross [w] =
+      -> [Int]            -- ^ list of indexes to remove
+      -> [Int]            -- ^ updated list of indexes to remove
+solve cross [] idx = idx
+solve cross (w:ws) idx = do
   case findWord w (getAllCombinations cross) of
-    Just n -> removeWord cross n 11
-    Nothing -> error w
-solve cross (w:ws) = solve (solve cross [w]) ws
+    Just n -> idx ++ n --removeWord cross n 11
+    Nothing -> error w--idx
+  ++ solve cross ws idx
 
--- solve cross words =
---   case findWord "JULIET" (getAllCombinations cross) of
---     Just n -> removeWord cross n 11
---     Nothing -> error "world not found"
+removeIndexes :: [[(Char, Int)]]  -- ^ crossword
+              -> [Int]            -- ^ indexes to remove
+              -> [[(Char, Int)]]  -- ^ solved crossword
+-- set: delete duplicates
+removeIndexes cross idxs = removeWord cross (nub idxs) (length (head cross) - 1)
+
 
 makeCrossString :: [[(Char, Int)]] -> String
 makeCrossString [] = []
@@ -151,7 +161,17 @@ makeCrossString' ((a,b):xs) = a : makeCrossString' xs
 
 main :: IO ()
 main = do
-  cross <- readCrossword "data1/crossword"
-  words <- readWords "data1/words"
-  print (solve cross ["JULIET", "CARESS","WEDDING", "ROMEO", "BOUQUETTE"])
-  --print ( handle (solve cross ["JULIET", "CARESS"]) ([0..(16*12)]) (length(head cross)))
+  putStrLn "Welcome to puzzle Solver. Give me a data set [1,2,3]"
+  setNumber <- getLine
+  let crosswordPath | setNumber == "1" = "data1/crossword"
+                    | setNumber == "2" = "data2/crossword"
+                    | setNumber == "3" = "data3/crossword"
+                    | otherwise = error "No such data set"
+  let wordsPath     | setNumber == "1" = "data1/words"
+                    | setNumber == "2" = "data2/words"
+                    | setNumber == "3" = "data3/words"
+                    | otherwise = error "No such data set"
+  cross <- readCrossword crosswordPath
+  words <- readWords wordsPath
+  --print words
+  putStrLn (makeCrossString (removeIndexes cross (solve cross words [])))
