@@ -1,4 +1,5 @@
 import Data.List
+import Data.Maybe
 -- import Data.Char
 -- import qualified Data.Set as Set
 
@@ -49,7 +50,8 @@ removeFirstRow ((x):xs) = xs
 
 removeLastCol :: [[(Char, Int)]] -> [[(Char, Int)]]
 removeLastCol [[]] = []
-removeLastCol x = map init x
+removeLastCol ([]:_) = []
+removeLastCol ((x):xs) = map init ((x):xs)
 
 diagonal :: [[(Char, Int)]] -> [(Char, Int)]
 diagonal [] = []
@@ -62,38 +64,8 @@ antidiagonal [] = []
 antidiagonal ([]:_) = []
 antidiagonal ((x):xs) = last x : antidiagonal (map init xs)
 
--- -- diagonale rozpoczynające się od kolejnych kolumn
--- allDiagonals :: [[(Char, Int)]] -> [[(Char, Int)]]
--- allDiagonals [] = []
--- allDiagonals x = [diagonal x] ++ [reverse (antidiagonal x)] ++ allDiagonals (removeFirstRow x)
-
--- getAllCombinations :: [[(Char, Int)]] -> [[(Char, Int)]]
--- getAllCombinations [[]] = []
--- getAllCombinations crossword = crossword ++ transposeCrossword crossword ++ allDiagonals crossword ++ allDiagonals (transposeCrossword crossword)
-
--- printElements :: [(Char, Int)] -> Int -> Int -> IO()
--- printElements [] _ _  = putStrLn ""
--- printElements ((a,b):c) 0 crwrdLength = do
---     putStrLn([a])
---     printElements c crwrdLength crwrdLength
-
--- printElements ((a,b):c) num crwrdLength = do
---   putStr([a])
---   printElements c (num - 1) crwrdLength
-
--- printList :: String ->  IO()
--- printList [] = do putStrLn ""
--- printList (x:xs) = do putStr [x]
---                       printList xs
-
--- printSolution :: [String] -> IO()
--- printSolution [] = do putStr ""
--- printSolution (x:xs) = do printList x
---                           printSolution xs
-
-lol = [[('A',1),('B',2),('C',3)],[('D',4),('E',5),('F',6)],[('G',7),('H',8),('I',9)]]
-chuj = reverse ( antidiagonal lol )
-chujstwo = removeLastCol lol
+lol = [[('A',1),('B',2),('C',3)],[('D',4),('E',5),('F',6)],[('G',7),('H',8),('I',9)],
+      [('A',10),('B',11),('C',12)]]
 
 antiDiagonals :: [[(Char, Int)]] -> [[(Char, Int)]]
 antiDiagonals [] = []
@@ -102,21 +74,38 @@ antiDiagonals x = [antidiagonal x] ++ [reverse (antidiagonal x)] ++ antiDiagonal
 -- diagonale rozpoczynające się od kolejnych kolumn
 allDiagonals :: [[(Char, Int)]] -> [[(Char, Int)]]
 allDiagonals [] = []
--- allDiagonals x = [reverse (antidiagonal x)] ++ allDiagonals (removeFirstRow x)
+-- allDiagonals x = [diagonal x] ++ [reverse ( diagonal x )] ++ allDiagonals (removeFirstRow x)
 allDiagonals x = [diagonal x] ++ [reverse ( diagonal x )] ++ [antidiagonal x] ++ [reverse (antidiagonal x)] ++ allDiagonals (removeFirstRow x)
 
 getAllCombinations :: [[(Char, Int)]] -> [[(Char, Int)]]
 getAllCombinations [[]] = []
 getAllCombinations crossword = crossword ++ transposeCrossword crossword ++ allDiagonals crossword ++ allDiagonals (transposeCrossword crossword) ++ antiDiagonals crossword ++ antiDiagonals (transpose crossword)
 
+-- 
+
+substrPos xs str = map (($ tails str) . findIndex . isPrefixOf) xs
+
+indicesOfSubStr :: String -> String -> [Int]
+indicesOfSubStr []  _   = []
+indicesOfSubStr sub str = filter (\i -> sub `isPrefixOf` drop i str) $ head sub `elemIndices` str
+   
+findSubstring :: String           -- ^ string to search for
+            -> [(Char, Int)]   -- ^ row to search in
+            -> Maybe [Int]           -- ^ list of indexes
+findSubstring search str = do
+  idx <- findString' search (map fst str)
+  return (map snd . take (length search) . drop idx $ str)
+
+-- 
+
+findString' :: String 
+            -> String
+            -> Maybe Int
 findString' search str = findIndex (isPrefixOf search) (tails str)
 
-test = findString "CDE" [('A', 1),('B', 2),('C' ,3),('C',4),('E',5),('F', 6)]
-
---
 findString :: String           -- ^ string to search for
             -> [(Char, Int)]   -- ^ row to search in
-            -> Maybe [Int]     -- ^ list of indexes
+            -> Maybe [Int]           -- ^ list of indexes
 findString search str = do
   idx <- findString' search (map fst str)
   return (map snd . take (length search) . drop idx $ str)
@@ -126,12 +115,18 @@ findWord :: String              -- ^ word
           -> [[(Char, Int)]]    -- ^ all combinations of crossword
           -> Maybe [Int]        -- ^ list of indexes
 findWord _ [] = Nothing
--- findWord [] _ = Nothing
 -- findWord word [x] = findString word x
--- findWord word (x:xs) = if (findString word x) == Nothing 
 findWord word (x:xs) = if (findString word x) == Nothing
                         then findWord word xs
                       else findString word x
+
+findWord' :: String
+          -> [[(Char, Int)]]
+          -> Maybe [Int]
+findWord' word xs = Just (concat(fun word xs [])) 
+  where fun _ [] acc = acc
+        fun word (x:xs) acc = fun word xs ((maybeToList (findString word x))++acc)
+
 
 removeLetter' :: [(Char, Int)] -> Int -> [(Char, Int)]
 removeLetter' [] _ = []
@@ -164,19 +159,19 @@ removeWord cross (x:xs) cols = removeWord (removeLetter cross x cols cols) xs co
 
 solve :: [[(Char, Int)]]  -- ^ crossword
       -> [String]         -- ^ list of words to find
-      -> [Int]            -- ^ list of indexes to remove
+      -- -> [Int]            -- ^ list of indexes to remove
       -> [Int]            -- ^ updated list of indexes to remove
-solve cross [] idx = idx
-solve cross (w:ws) idx = do
-  case findWord w (getAllCombinations cross) of
-    Just n -> idx ++ n --removeWord cross n 11
-    Nothing -> error w--idx
-  ++ solve cross ws idx
+solve cross (w:ws) = solve' cross (w:ws) []
+  where solve' cross [] idx = idx
+        solve' cross (w:ws) idx = do
+          case findWord' w (getAllCombinations cross) of
+            Just n -> idx ++ n
+            Nothing -> error w
+          ++ solve' cross ws idx
 
 removeIndexes :: [[(Char, Int)]]  -- ^ crossword
               -> [Int]            -- ^ indexes to remove
               -> [[(Char, Int)]]  -- ^ solved crossword
--- set: delete duplicates
 removeIndexes cross idxs = removeWord cross (nub idxs) (length (head cross) - 1)
 
 
@@ -202,5 +197,5 @@ main = do
                     | otherwise = error "No such data set"
   cross <- readCrossword crosswordPath
   words <- readWords wordsPath
-  --print words
-  putStrLn (makeCrossString (removeIndexes cross (solve cross words [])))
+
+  putStrLn (makeCrossString (removeIndexes cross (solve cross words)))
