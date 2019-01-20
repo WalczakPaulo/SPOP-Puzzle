@@ -123,7 +123,9 @@ findWord word (x:xs) = if (findString word x) == Nothing
 findWord' :: String
           -> [[(Char, Int)]]
           -> Maybe [Int]
-findWord' word xs = Just (concat(fun word xs [])) 
+findWord' word xs | null (concat(fun word xs [])) == True = Nothing
+                  | otherwise = Just (concat(fun word xs []))
+-- findWord' word xs = Just (concat(fun word xs [])) 
   where fun _ [] acc = acc
         fun word (x:xs) acc = fun word xs ((maybeToList (findString word x))++acc)
 
